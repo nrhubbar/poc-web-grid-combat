@@ -1,4 +1,12 @@
-/* styles.css */
+
+:root {
+  --cell-width: 60px;
+  --cell-height: 60px;
+  --cell-margin: -8px 0px; /* Slightly overlaps the top and bottom rows */
+  --cell-inner-height: 30px;
+  --cell-inner-width: 60px;
+}
+
 body {
   font-family: Arial, sans-serif;
   display: flex;
@@ -19,8 +27,8 @@ body {
 }
 
 .cell {
-  width: 60px;
-  height: 60px; /* Adjusted for pointy top */
+  width: var(--cell-width);
+  height: var(--cell-height); /* Adjusted for pointy top */
   background-color: #f4f4f4;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   display: flex;
@@ -28,16 +36,44 @@ body {
   align-items: center;
   position: relative;
   overflow: hidden;
-  margin: -8px 0px; /* Overlapping rows vertically */
+  margin: var(--cell-margin); /* Overlapping rows vertically */
+}
+
+.active-cell {
+  width: var(--cell-width);
+  height: var(--cell-height); /* Adjusted for pointy top */
+  background-color: #f4f4f4;
+  /*clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);*/
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  margin: var(--cell-margin); /* Overlapping rows vertically */
 }
 
 .cell:hover {
   background-color: aquamarine;
 }
 
+
+.soldier {
+  position: relative;
+  width: var(--cell-inner-width);
+  height: var(--cell-inner-height);
+  white-space: nowrap;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.soldier:hover {
+  transform: scale(1.4);
+  z-index: 10;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
 .prussian-blue {
-  width: 75%;
-  height: 50%;
   background-color: #003153;
   color: #f4f4f4;
   /*clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);*/
@@ -79,8 +115,14 @@ body {
   background-color: #BB3202;
 }
 
+#events-container {
+  display: flex;
+  flex-direction: row;
+}
+
 .hide-container {
   visibility: hidden;
+  display: none;
 }
 
 #log-container {

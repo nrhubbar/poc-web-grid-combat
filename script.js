@@ -113,8 +113,8 @@ class Cell {
                 <div class="soldiers">
                     ${this.soldiers.map((soldier, i) => {
                         return `
-                            <div class="soldier ${soldier.getStyleClasses()}">
-                                ${soldier.attack}-${soldier.defence}-${soldier.movement}
+                            <div class="soldier clickable ${soldier.getStyleClasses()}" data-soldier-id="${soldier.id}">
+                               ${soldier.attack}-${soldier.defence}-${soldier.movement}
                             </div>
                         `;
                     }).join("")}
@@ -135,8 +135,7 @@ class Cell {
 
         return `
             <div class="${this.terrain.style} ${this.fortification.style}">
-                ${cityContent}
-                ${soldierContent}
+                ${soldierContent ? soldierContent : cityContent}
             </div>
         `;
     }
@@ -394,7 +393,7 @@ const COMBAT_RESULTS_BY_ODDS = Object.freeze({
 })
 
 const STARTING_TURN_STATE = TURN_STATES.PLACE_REINFORCEMENTS;
-const STARTING_REMAINING_REINFORCEMENTS = 1;
+const STARTING_REMAINING_REINFORCEMENTS = 5; // TODO: Doesn't really scale well.
 const STARTING_PLAYER = PLAYERS.BLUE;
 const STARTING_GRID = generateInitialBoard(BOARD_SIZE);
 
@@ -442,9 +441,10 @@ function renderBoard() {
     const boardHtml = Object.keys(currentState.grid).toSorted(intSortFunction).map((q) => {
         const innerRow = Object.keys(currentState.grid[q]).toSorted(intSortFunction).map((r) => {
             const cell = currentState.grid[q][r];
+            const isActive = shouldShowSoldiers(new Coordinates(q, r));
             return `
-                <div class="cell" data-q="${q}" data-r="${r}" id="cell-wrapper-${q}-${r}">
-                    ${cell.getContent(shouldShowSoldiers(new Coordinates(q, r)))}
+                <div class="${isActive ? "active-cell" : "cell"}" data-q="${q}" data-r="${r}" id="cell-wrapper-${q}-${r}">
+                    ${cell.getContent(isActive)}
                 </div>
             `;
         }).join("");
@@ -515,7 +515,77 @@ function renderBoard() {
         cell.addEventListener("click", () => handleCellClick(new Coordinates(q, r)));
     });
 
+    Array.from(document.querySelectorAll(".soldier.clickable")).forEach(soldier => {
+        const soldierId = parseInt(soldier.dataset.soldierId)
+        soldier.addEventListener("click", () => handleSoldierClick(soldierId))
+    })
+
     document.getElementById("next-phase-button").addEventListener("click", () => handleNextPhase());
+}
+
+function handleSoldierClick(soldierId) {
+
+    switch (currentState.turnState) {
+        
+
+        case TURN_STATES.MOVEMENT_SELECTING_SOLDIER: {
+            const sourceCoordinate = currentState.sourceCell;
+            const cell = currentState.grid[sourceCoordinate.q][sourceCoordinate.r];
+            const soldiersWithMatchingId = cell.soldiers.filter(_soldier => _soldier.id == soldierId);
+
+            if (soldiersWithMatchingId.length == 0) {
+                console.error("Selected soldier not in expected cell, returning.")
+                return;
+            }
+            if (soldiersWithMatchingId.length > 1) {
+                throw new Error(`Too many soldiers in cell with matching Id: ${soldierId}; ${soldiersWithMatchingId}; ${cell}`);
+            }
+
+            const soldier = soldiersWithMatchingId[0];
+
+            if (soldier.player !== currentState.currentPlayer) {
+                console.error(`Something has gone terribly wrong, a soldier of the wrong cell was clickable. ${soldier.player}, ${currentState.currentPlayer}`);
+            }
+
+            if (soldier.hasMovedThisTurn) {
+                console.error("Soldier already moved this turn, choose another one.");
+            }
+
+            const allMoves = soldier.getMoves(sourceCoordinate)
+                
+            const uniqueMoves = [... new Set(allMoves)];
+
+            const legalMoves = uniqueMoves
+                .filter((_coordinate) => {
+                    const target = currentState.grid[_coordinate.q][_coordinate.r];
+                    return !target.getPlayer() || soldier.getPlayer() === target.getPlayer();
+                });
+            
+                if (legalMoves.length <= 1) {
+                    console.error("This soldier has no moves");
+                }
+
+                legalMoves.forEach((_coordinate) => {        
+                    document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
+                            .classList
+                            .add("empty-move");
+                });
+
+                currentState = {
+                    ...currentState,
+                    turnState: TURN_STATES.SELECTING_MOVE,
+                    sourceSoldier: soldier,
+                    sourceCell: sourceCoordinate,
+                    validMoves: legalMoves,
+                };
+                break;
+        }
+
+        default: {
+            throw new Error(`Wrong state, should not have this listener: Current State: ${currentState.turnState} in handleSoldierClick`);
+        }
+    }
+
 }
 
 function handleCellClick(coordinate) {
@@ -551,48 +621,62 @@ function handleCellClick(coordinate) {
         // Movement Phase:
         case TURN_STATES.MOVEMENT_SELECTING_CELL: {
             //TODO: Show all of the soldiers in this cell
+
+            const cell = currentState.grid[coordinate.q][coordinate.r];
+    
+            if (cell.getPlayer() !== currentState.currentPlayer) {
+                return; // Only allow current player's turn
+            }
+
+            currentState = {
+                ...currentState,
+                sourceCell: coordinate,
+                turnState: TURN_STATES.MOVEMENT_SELECTING_SOLDIER,
+            };
+            renderBoard();
             break;
         }
         case TURN_STATES.MOVEMENT_SELECTING_SOLDIER: {
-            const cell = currentState.grid[coordinate.q][coordinate.r];
+            console.error("We don't want this to get invoked now.")
+            // const cell = currentState.grid[coordinate.q][coordinate.r];
     
-            if (cell.getPlayer() !== currentState.currentPlayer) return; // Only allow current player's turn
+            // if (cell.getPlayer() !== currentState.currentPlayer) return; // Only allow current player's turn
     
-            const moves = cell.getMoves(coordinate)
-                .filter((_coordinate) => {
-                    const target = currentState.grid[_coordinate.q][_coordinate.r];
-                    return !target.getPlayer(); // || cell.getPlayer() === target.getPlayer(); // TODO: Allow support for "stacking" soldiers
-                })
+            // const moves = cell.getMoves(coordinate)
+            //     .filter((_coordinate) => {
+            //         const target = currentState.grid[_coordinate.q][_coordinate.r];
+            //         return !target.getPlayer(); // || cell.getPlayer() === target.getPlayer(); // TODO: Allow support for "stacking" soldiers
+            //     })
     
-            if (moves.length <= 1) {
-                console.error("This soldier has no moves");
-                return;
-            }
+            // if (moves.length <= 1) {
+            //     console.error("This soldier has no moves");
+            //     return;
+            // }
     
-            moves.forEach((_coordinate) => {
-                const target = currentState.grid[_coordinate.q][_coordinate.r];
+            // moves.forEach((_coordinate) => {
+            //     const target = currentState.grid[_coordinate.q][_coordinate.r];
     
-                if (!target.getPlayer()) {
-                    document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-                        .classList
-                        .add("empty-move");
-                }
-            });
-            currentState = {
-                ...currentState,
-                turnState: TURN_STATES.SELECTING_MOVE,
-                sourceCell: coordinate,
-                validMoves: moves,
-            };
-            break;
+            //     if (!target.getPlayer()) {
+            //         document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
+            //             .classList
+            //             .add("empty-move");
+            //     }
+            // });
+            // currentState = {
+            //     ...currentState,
+            //     turnState: TURN_STATES.SELECTING_MOVE,
+            //     sourceCell: coordinate,
+            //     validMoves: moves,
+            // };
+            // break;
         }
         case TURN_STATES.SELECTING_MOVE: {
-            if (currentState.sourceCell == coordinate) {
+            if (currentState.sourceCell.equals(coordinate)) {
                 // Selected current cell, cancelling move
                 currentState = {
                     ...currentState,
                     validMoves: [],
-                    turnState: TURN_STATES.MOVEMENT_SELECTING_SOLDIER,
+                    turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
                 };
                 renderBoard();
                 return;
@@ -603,27 +687,38 @@ function handleCellClick(coordinate) {
                 // todo: Clear sourceCell, validMoves, and go back to MOVEMENT_SELECTING_SOLDIER
                 return;
             }
+
+            if (currentState.grid[coordinate.q][coordinate.r].getPlayer() && (currentState.grid[coordinate.q][coordinate.r].getPlayer() != currentState.currentPlayer)) {
+                console.error("We are trying to break up 'attack' phase from 'movement' phase, this move should've been considered illegal");
+            }
+
+            const movesFromSameCellToSameCell = currentState.moves
+                .filter(move => move.sourceCoordinate.equals(currentState.sourceCell))
+                .filter(move => move.targetCoordinate.equals(coordinate));
             
-            if (!currentState.grid[coordinate.q][coordinate.r].getPlayer()) {
+            if (movesFromSameCellToSameCell.length === 0) { // This is a new move
                 currentState = {
                     ...currentState,
                     moves: [
                         ...currentState.moves,
-                        new Move(currentState.sourceCell, coordinate, currentState.grid[currentState.sourceCell.q][currentState.sourceCell.r].soldiers),
+                        new Move(currentState.sourceCell, coordinate, [currentState.sourceSoldier]),
                     ],
-                    turnState: TURN_STATES.MOVEMENT_SELECTING_SOLDIER,
+                    turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
                 };
-            } else if (currentState.grid[coordinate.q][coordinate.r].getPlayer() != currentState.currentPlayer) {
-                log.error("We are trying to break up 'attack' phase from 'movement' phase, this move should've been considered illegal");
+            } else if (movesFromSameCellToSameCell.length === 1) { // Append to existing move
+                movesFromSameCellToSameCell[0].soldiers = [
+                    ...movesFromSameCellToSameCell[0].soldiers,
+                    currentState.sourceSoldier,
+                ];
                 currentState = {
                     ...currentState,
-                    logs: [
-                        combat([currentState.sourceCell], coordinate),
-                        ...currentState.logs,
-                    ],
-                    turnState: TURN_STATES.MOVEMENT_SELECTING_SOLDIER,
+                    turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
                 };
+            } else {
+                throw new Error("There should only ever be 1 move from the same cell, to the same cell.");
             }
+            
+            currentState.sourceSoldier.hasMovedThisTurn = true;
             renderBoard();
             break;
         }
@@ -653,7 +748,7 @@ function handleCellClick(coordinate) {
                 const target = currentState.grid[_coordinate.q][_coordinate.r];
     
                 if (!target.getPlayer()) {
-                    log.error("We are trying to break up 'attack' phase from 'movement' phase, this shouldn't happen in the Combat Section.");
+                    console.error("We are trying to break up 'attack' phase from 'movement' phase, this shouldn't happen in the Combat Section.");
                     document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
                         .classList
                         .add("empty-move");
@@ -719,7 +814,7 @@ function handleCellClick(coordinate) {
         // Combat Resolution Phase?
 
         default: {
-            log.error(`Unable to handle turnstate: ${currentState.turnState}`);
+            console.error(`Unable to handle turnstate: ${currentState.turnState}`);
         }
     }
 }
@@ -733,15 +828,22 @@ function handleNextPhase() {
                     `${currentState.currentPlayer} ended placing reinforcements, moving on to Movement Phase.`,
                     ...currentState.logs,
                 ],
-                turnState: TURN_STATES.MOVEMENT_SELECTING_SOLDIER,
+                turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
             };
             break;
         }
-        case TURN_STATES.MOVEMENT_SELECTING_SOLDIER: { // TODO: add support for breaking out "attack phase" into separate phase from movement
+        case TURN_STATES.MOVEMENT_SELECTING_CELL: {
             const moveLogs = currentState.moves.map((move) => {
-                Cell.swapAllSoldiers(
-                    currentState.grid[move.sourceCoordinate.q][move.sourceCoordinate.r], 
-                    currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r]);
+                currentState.grid[move.sourceCoordinate.q][move.sourceCoordinate.r].soldiers = currentState.grid[move.sourceCoordinate.q][move.sourceCoordinate.r].soldiers
+                    .filter(_soldier => !move.soldiers.includes(_soldier));
+                
+                currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r].soldiers = [
+                    ...currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r].soldiers,
+                    ...move.soldiers,
+                ]
+                // Cell.swapAllSoldiers(
+                //     currentState.grid[move.sourceCoordinate.q][move.sourceCoordinate.r], 
+                //     currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r]);
                 return `${currentState.currentPlayer} moved to: ${move.targetCoordinate}`;
             });
             currentState = {
@@ -752,8 +854,12 @@ function handleNextPhase() {
                     ...currentState.logs,
                 ],
                 moves: [],
-                turnState: TURN_STATES.COMBAT_SELECTING_SOLDIER,
+                turnState: TURN_STATES.COMBAT_SELECTING_CELL,
             };
+            break;
+        }
+        case TURN_STATES.MOVEMENT_SELECTING_SOLDIER: {// This phase can only be moved out of, by completing a move. 'handleCellClick' should handle moving back to 'MOVEMENT_SELECTING_SOLDIER'
+            console.error("Please finish selecting soldier to make move.")
             // endTurn();
             break;
         }
@@ -761,7 +867,8 @@ function handleNextPhase() {
             console.error("Please finish making move.");
             return;
         }
-        case TURN_STATES.COMBAT_SELECTING_SOLDIER: { // TODO
+
+        case TURN_STATES.COMBAT_SELECTING_CELL: {
             const invasionLogs = currentState.invasions.map((invasion) => {
                 return combat(invasion.sourceCoordinates, invasion.targetCoordinate);
             });
@@ -774,6 +881,10 @@ function handleNextPhase() {
                 invasions: [],
             };
             endTurn();
+            break;
+        }
+        case TURN_STATES.COMBAT_SELECTING_SOLDIER: { // TODO
+            console.error("Please finish selecting combat soldier");
             break;
         }
         case TURN_STATES.SELECTING_COMBAT: {
@@ -858,7 +969,7 @@ function endTurn() {
         ...currentState,
         currentPlayer: getNextTurn(currentState.currentPlayer),
         turnState: TURN_STATES.PLACE_REINFORCEMENTS,
-        remainingReinforcements: 1,
+        remainingReinforcements: 2,
         moves: [],
         attacks: [],
     };
@@ -878,6 +989,7 @@ function endTurn() {
 
 function shouldRenderMovesContainer() {
     return [
+        TURN_STATES.MOVEMENT_SELECTING_CELL,
         TURN_STATES.MOVEMENT_SELECTING_SOLDIER, 
         TURN_STATES.SELECTING_MOVE,
     ].includes(currentState.turnState);
@@ -885,6 +997,7 @@ function shouldRenderMovesContainer() {
 
 function shouldRenderInvasionsContainer() {
     return [
+        TURN_STATES.COMBAT_SELECTING_CELL,
         TURN_STATES.COMBAT_SELECTING_SOLDIER, 
         TURN_STATES.SELECTING_COMBAT,
     ].includes(currentState.turnState);
