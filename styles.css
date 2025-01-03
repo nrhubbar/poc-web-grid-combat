@@ -16,6 +16,29 @@ body {
   margin: 0;
 }
 
+#game {
+  display: grid;
+  gap: 1rem;
+  grid-template-rows: 2fr 1fr 16fr 4fr;
+}
+
+#game-area {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 32fr 4fr;
+}
+
+#menu {
+  display: grid;
+  gap: 1rem;
+  grid-template-rows: 1fr 1fr;
+  width: 350px;
+}
+
+.menu-block {
+  border: 1px solid #ccc;
+}
+
 .board {
   display: flex;
   flex-direction: column;
@@ -31,19 +54,6 @@ body {
   height: var(--cell-height); /* Adjusted for pointy top */
   background-color: #f4f4f4;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-  margin: var(--cell-margin); /* Overlapping rows vertically */
-}
-
-.active-cell {
-  width: var(--cell-width);
-  height: var(--cell-height); /* Adjusted for pointy top */
-  background-color: #f4f4f4;
-  /*clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);*/
   display: flex;
   justify-content: center;
   align-items: center;
@@ -80,8 +90,6 @@ body {
 }
 
 .forest-green {
-  width: 75%;
-  height: 50%;
   background-color: #228B22;
   /* clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); */
 }
@@ -116,8 +124,7 @@ body {
 }
 
 #events-container {
-  display: flex;
-  flex-direction: row;
+  
 }
 
 .hide-container {
@@ -126,13 +133,10 @@ body {
 }
 
 #log-container {
-  display: flex;
-  flex-direction: column;
 
   align-items: center;
 
   gap: 10px;
-  width: 400px;
   height: 200px;
   border: 1px solid #ccc;
   overflow-y: auto;
@@ -140,7 +144,7 @@ body {
 }
 
 .logs {
-  width: 300px;
+  width: 90%;
   height: 50px;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -149,20 +153,6 @@ body {
   align-items: center;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
   background-color: white;
-}
-
-#moves-container {
-  display: flex;
-  flex-direction: column;
-
-  align-items: center;
-
-  gap: 10px;
-  width: 400px;
-  height: 200px;
-  border: 1px solid #ccc;
-  overflow-y: auto;
-  padding: 10px;
 }
   
 .moves {
@@ -175,20 +165,6 @@ body {
   align-items: center;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
   background-color: white;
-}
-
-#invasions-container {
-  display: flex;
-  flex-direction: column;
-
-  align-items: center;
-
-  gap: 10px;
-  width: 400px;
-  height: 200px;
-  border: 1px solid #ccc;
-  overflow-y: auto;
-  padding: 10px;
 }
   
 .invasions {
@@ -206,6 +182,11 @@ body {
 #info-panel-container {
   display: flex;
   justify-content: space-between;
+}
+
+.soldier-info-container {
+  display: grid;
+  gap: 1rem;
 }
 
 button {

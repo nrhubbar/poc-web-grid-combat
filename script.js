@@ -97,7 +97,7 @@ class Cell {
     /**
      * Return the inner html for this cell.
      */
-    getContent(shouldCascadeSoldiers) {
+    getBoardContent(shouldCascadeSoldiers) {
         let cityContent = "";
         if (this.city) {
             cityContent = `
@@ -108,23 +108,19 @@ class Cell {
         }
 
         let soldierContent = "";
-        if (shouldCascadeSoldiers) {
-            soldierContent = `
-                <div class="soldiers">
-                    ${this.soldiers.map((soldier, i) => {
-                        return `
-                            <div class="soldier clickable ${soldier.getStyleClasses()}" data-soldier-id="${soldier.id}">
-                               ${soldier.attack}-${soldier.defence}-${soldier.movement}
-                            </div>
-                        `;
-                    }).join("")}
-                </div>
-            `;
-        } else if (this.soldiers && this.soldiers.length > 0) {
+        if (this.soldiers && this.soldiers.length === 1) {
             soldierContent = `
                 <div class="soldiers">
                     <div class="soldier ${this.soldiers[0].getStyleClasses()}">
                         ${this.soldiers[0].attack}-${this.soldiers[0].defence}-${this.soldiers[0].movement}
+                    </div>
+                </div>
+            `;
+        } else if (this.soldiers && this.soldiers.length > 1) {
+            soldierContent = `
+                <div class="soldiers">
+                    <div class="soldier ${this.soldiers[0].getStyleClasses()}">
+                        ${this.soldiers.map(s => s.attack).reduce((acc, val) => acc + val, 0)}-${this.soldiers.map((s) => s.defence).reduce((acc, val) => acc + val, 0)}
                     </div>
                 </div>
             `;
@@ -137,6 +133,51 @@ class Cell {
             <div class="${this.terrain.style} ${this.fortification.style}">
                 ${soldierContent ? soldierContent : cityContent}
             </div>
+        `;
+    }
+
+    getCellInfoContent() {
+        let cityContent = "";
+        if (this.city) {
+            cityContent = `
+                <div class="city-info">
+                    ${this.city.name}
+                </div>
+            `;
+        }
+        const terrainContent = `
+            <div class="terrain-info">
+                Type: ${this.terrain.name}
+                Movement Points: ${this.terrain.movement}
+                Attack Roll Modifier: ${this.terrain.attackRollModifier}
+                Defence Roll Movdifier: ${this.terrain.defenceRollModifier}
+            </div>
+        `;
+        const fortificationContent = `
+            <div class="fortification-info">
+                Level: ${this.fortification.name}
+                Attack Roll Modifier: ${this.fortification.attackRollModifier}
+                Defence Roll Movdifier: ${this.fortification.defenceRollModifier}
+            </div>
+        `;
+        const soldierContent = `
+            <div class="soldier-info-container">
+                ${
+                    this.soldiers.map((soldier) => {
+                        return `
+                            <div class="soldier-info clickable ${soldier.getStyleClasses()}" data-soldier-id="${soldier.id}">
+                               ${soldier.attack}-${soldier.defence}-${soldier.movement}
+                            </div>
+                        `;
+                    }).join("")
+                }
+            </div>
+        `;
+        return `
+            ${cityContent}
+            ${terrainContent}
+            ${fortificationContent}
+            ${soldierContent}
         `;
     }
 
@@ -393,7 +434,7 @@ const COMBAT_RESULTS_BY_ODDS = Object.freeze({
 })
 
 const STARTING_TURN_STATE = TURN_STATES.PLACE_REINFORCEMENTS;
-const STARTING_REMAINING_REINFORCEMENTS = 5; // TODO: Doesn't really scale well.
+const STARTING_REMAINING_REINFORCEMENTS = 2; // TODO: Doesn't really scale well.
 const STARTING_PLAYER = PLAYERS.BLUE;
 const STARTING_GRID = generateInitialBoard(BOARD_SIZE);
 
@@ -443,8 +484,8 @@ function renderBoard() {
             const cell = currentState.grid[q][r];
             const isActive = shouldShowSoldiers(new Coordinates(q, r));
             return `
-                <div class="${isActive ? "active-cell" : "cell"}" data-q="${q}" data-r="${r}" id="cell-wrapper-${q}-${r}">
-                    ${cell.getContent(isActive)}
+                <div class="cell" data-q="${q}" data-r="${r}" id="cell-wrapper-${q}-${r}">
+                    ${cell.getBoardContent(isActive)}
                 </div>
             `;
         }).join("");
@@ -461,43 +502,31 @@ function renderBoard() {
             ${boardHtml}
         </div>
     `;
+    const menu = `
+        <div id="menu">
+            <div id="actions" class="menu-block">
+                ${getActionsContent()}
+            </div>
+            <div id="cell-info" class="menu-block">
+                <h3 class="menu-title"> Cell Info: </h3>
+                <h4> Coordinates: ${currentState.sourceCell} </h4>
+                ${currentState.sourceCell ? currentState.grid[currentState.sourceCell.q][currentState.sourceCell.r].getCellInfoContent() : ""}
+            </div>
+        </div>
+    `;
+
+    const gameArea = `
+        <div id="game-area">
+            ${board}
+            ${menu}
+        </div>
+    `;
 
     const logs = `
         <div id="events-container">
             <h2> Events: </h2>
             <div id="log-container">
-                <h3> Logs: </h3>
                 ${currentState.logs.map(message => `<div class="logs"> ${message}</div>`).join("")}
-            </div>
-            <div id="moves-container" class="${shouldRenderMovesContainer() ? "show-container" : "hide-container"}">
-                <h3> Moves: </h3>
-                ${currentState.moves.map((move, i) => { 
-                    return `
-                        <div class="moves" id="move-${i}">
-                            <h4 class="move-number"> ${i} </h4>
-                            <p>
-                                From: ${move.sourceCoordinate}
-                                To: ${move.targetCoordinate}
-                                Soldiers: [${move.soldiers.map(soldier => soldier.id).join(", ")}]
-                            </p>
-                        </div>
-                    `;
-                }).join("")}
-            </div>
-            <div id="invasions-container" class="${shouldRenderInvasionsContainer() ? "show-container" : "hide-container"}">
-                <h3> Invasions: </h3>
-                ${currentState.invasions.map((invasion, i) => { 
-                    return `
-                        <div class="invasions" id="invasion-${i}">
-                            <h4 class="invasion-number"> ${i} </h4>
-                            <p>
-                                From: [${invasion.sourceCoordinates.join(", ")}]
-                                To: ${invasion.targetCoordinate}
-                                Soldiers: [${invasion.attackingSoldiers.map(soldier => soldier.id).join(", ")}]
-                            </p>
-                        </div>
-                    `;
-                }).join("")}
             </div>
         </div>
     `
@@ -505,7 +534,7 @@ function renderBoard() {
     game.innerHTML = `
         ${title}
         ${infoPanel}
-        ${board}
+        ${gameArea}
         ${logs}
     `;
     
@@ -515,7 +544,7 @@ function renderBoard() {
         cell.addEventListener("click", () => handleCellClick(new Coordinates(q, r)));
     });
 
-    Array.from(document.querySelectorAll(".soldier.clickable")).forEach(soldier => {
+    Array.from(document.querySelectorAll(".soldier-info.clickable")).forEach(soldier => {
         const soldierId = parseInt(soldier.dataset.soldierId)
         soldier.addEventListener("click", () => handleSoldierClick(soldierId))
     })
@@ -558,27 +587,81 @@ function handleSoldierClick(soldierId) {
             const legalMoves = uniqueMoves
                 .filter((_coordinate) => {
                     const target = currentState.grid[_coordinate.q][_coordinate.r];
-                    return !target.getPlayer() || soldier.getPlayer() === target.getPlayer();
+                    return !target.getPlayer() || soldier.player === target.getPlayer();
                 });
-            
-                if (legalMoves.length <= 1) {
-                    console.error("This soldier has no moves");
-                }
+        
+            if (legalMoves.length <= 1) {
+                console.error("This soldier has no moves");
+            }
 
-                legalMoves.forEach((_coordinate) => {        
-                    document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-                            .classList
-                            .add("empty-move");
+            legalMoves.forEach((_coordinate) => {        
+                document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
+                        .classList
+                        .add("empty-move");
+            });
+
+            currentState = {
+                ...currentState,
+                turnState: TURN_STATES.SELECTING_MOVE,
+                sourceSoldier: soldier,
+                sourceCell: sourceCoordinate,
+                validMoves: legalMoves,
+            };
+            break;
+        }
+
+        case TURN_STATES.COMBAT_SELECTING_SOLDIER: {
+
+            const sourceCoordinate = currentState.sourceCell;
+            const cell = currentState.grid[sourceCoordinate.q][sourceCoordinate.r];
+            const soldiersWithMatchingId = cell.soldiers.filter(_soldier => _soldier.id == soldierId);
+
+            if (soldiersWithMatchingId.length == 0) {
+                console.error("Selected soldier not in expected cell, returning.")
+                return;
+            }
+            if (soldiersWithMatchingId.length > 1) {
+                throw new Error(`Too many soldiers in cell with matching Id: ${soldierId}; ${soldiersWithMatchingId}; ${cell}`);
+            }
+
+            const soldier = soldiersWithMatchingId[0];
+
+            if (soldier.player !== currentState.currentPlayer) {
+                console.error(`Something has gone terribly wrong, a soldier of the wrong cell was clickable. ${soldier.player}, ${currentState.currentPlayer}`);
+            }
+
+            if (soldier.hasAttackedThisTurn) {
+                console.error("Soldier already attacked this turn, choose another one.");
+            }
+
+            const allTargets = soldier.getTargets(sourceCoordinate);
+                
+            const uniqueTargets = [... new Set(allTargets)];
+
+            const legalTargets = uniqueTargets
+                .filter((_coordinate) => {
+                    const target = currentState.grid[_coordinate.q][_coordinate.r];
+                    return target.getPlayer() && soldier.player !== target.getPlayer();
                 });
+        
+            if (legalTargets.length < 1) {
+                console.error("This soldier has no targets");
+            }
 
-                currentState = {
-                    ...currentState,
-                    turnState: TURN_STATES.SELECTING_MOVE,
-                    sourceSoldier: soldier,
-                    sourceCell: sourceCoordinate,
-                    validMoves: legalMoves,
-                };
-                break;
+            legalTargets.forEach((_coordinate) => {        
+                document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
+                        .classList
+                        .add("attack-move");
+            });
+
+            currentState = {
+                ...currentState,
+                turnState: TURN_STATES.SELECTING_COMBAT,
+                sourceSoldier: soldier,
+                sourceCell: sourceCoordinate,
+                validTargets: legalTargets,
+            };
+            break;
         }
 
         default: {
@@ -625,6 +708,11 @@ function handleCellClick(coordinate) {
             const cell = currentState.grid[coordinate.q][coordinate.r];
     
             if (cell.getPlayer() !== currentState.currentPlayer) {
+                currentState = {
+                    ...currentState,
+                    sourceCell: coordinate,
+                }
+                renderBoard();
                 return; // Only allow current player's turn
             }
 
@@ -637,38 +725,7 @@ function handleCellClick(coordinate) {
             break;
         }
         case TURN_STATES.MOVEMENT_SELECTING_SOLDIER: {
-            console.error("We don't want this to get invoked now.")
-            // const cell = currentState.grid[coordinate.q][coordinate.r];
-    
-            // if (cell.getPlayer() !== currentState.currentPlayer) return; // Only allow current player's turn
-    
-            // const moves = cell.getMoves(coordinate)
-            //     .filter((_coordinate) => {
-            //         const target = currentState.grid[_coordinate.q][_coordinate.r];
-            //         return !target.getPlayer(); // || cell.getPlayer() === target.getPlayer(); // TODO: Allow support for "stacking" soldiers
-            //     })
-    
-            // if (moves.length <= 1) {
-            //     console.error("This soldier has no moves");
-            //     return;
-            // }
-    
-            // moves.forEach((_coordinate) => {
-            //     const target = currentState.grid[_coordinate.q][_coordinate.r];
-    
-            //     if (!target.getPlayer()) {
-            //         document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-            //             .classList
-            //             .add("empty-move");
-            //     }
-            // });
-            // currentState = {
-            //     ...currentState,
-            //     turnState: TURN_STATES.SELECTING_MOVE,
-            //     sourceCell: coordinate,
-            //     validMoves: moves,
-            // };
-            // break;
+            console.error("We don't want this to get invoked now.");
         }
         case TURN_STATES.SELECTING_MOVE: {
             if (currentState.sourceCell.equals(coordinate)) {
@@ -677,6 +734,7 @@ function handleCellClick(coordinate) {
                     ...currentState,
                     validMoves: [],
                     turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
+                    sourceCell: null,
                 };
                 renderBoard();
                 return;
@@ -704,6 +762,7 @@ function handleCellClick(coordinate) {
                         new Move(currentState.sourceCell, coordinate, [currentState.sourceSoldier]),
                     ],
                     turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
+                    sourceCell: null,
                 };
             } else if (movesFromSameCellToSameCell.length === 1) { // Append to existing move
                 movesFromSameCellToSameCell[0].soldiers = [
@@ -713,6 +772,7 @@ function handleCellClick(coordinate) {
                 currentState = {
                     ...currentState,
                     turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
+                    sourceCell: null,
                 };
             } else {
                 throw new Error("There should only ever be 1 move from the same cell, to the same cell.");
@@ -725,46 +785,28 @@ function handleCellClick(coordinate) {
 
         // Combat Planning Phase
         case TURN_STATES.COMBAT_SELECTING_CELL: {
-            // TODO: Show each of the soldiers in this Cell
-            break;
-        }
-        case TURN_STATES.COMBAT_SELECTING_SOLDIER: {
             const cell = currentState.grid[coordinate.q][coordinate.r];
-    
-            if (cell.getPlayer() !== currentState.currentPlayer) return; // Only allow current player's turn
-    
-            const targets = cell.getTargets(coordinate)
-                .filter((_coordinate) => {
-                    const target = currentState.grid[_coordinate.q][_coordinate.r];
-                    return target.getPlayer() && cell.getPlayer() !== target.getPlayer();
-                })
-    
-            if (targets.length < 1) {
-                console.error("This soldier has no one to invade");
-                return;
-            }
-    
-            targets.forEach((_coordinate) => {
-                const target = currentState.grid[_coordinate.q][_coordinate.r];
-    
-                if (!target.getPlayer()) {
-                    console.error("We are trying to break up 'attack' phase from 'movement' phase, this shouldn't happen in the Combat Section.");
-                    document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-                        .classList
-                        .add("empty-move");
-                } else if (target.getPlayer() !== currentState.currentPlayer) {
-                    document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-                        .classList
-                        .add("attack-move");
+            
+            if (cell.getPlayer() !== currentState.currentPlayer) {
+                currentState = {
+                    ...currentState,
+                    sourceCell: coordinate,
                 }
-            });
+                renderBoard();
+                return; // Only allow current player's turn
+            }
+
             currentState = {
                 ...currentState,
-                turnState: TURN_STATES.SELECTING_COMBAT,
                 sourceCell: coordinate,
-                validTargets: targets,
+                turnState: TURN_STATES.COMBAT_SELECTING_SOLDIER,
             };
-            break;
+            renderBoard();
+            break; 
+            
+        }
+        case TURN_STATES.COMBAT_SELECTING_SOLDIER: {
+            console.error("We don't want selecting soldier to trigger handleCellClick");
         }
         case TURN_STATES.SELECTING_COMBAT: {
             if (currentState.sourceCell == coordinate) {
@@ -772,7 +814,8 @@ function handleCellClick(coordinate) {
                 currentState = {
                     ...currentState,
                     validMoves: [],
-                    turnState: TURN_STATES.COMBAT_SELECTING_SOLDIER,
+                    sourceCell: null,
+                    turnState: TURN_STATES.COMBAT_SELECTING_CELL,
                 };
                 renderBoard();
                 return;
@@ -793,15 +836,17 @@ function handleCellClick(coordinate) {
                         ...currentState,
                         invasions: [
                             ...currentState.invasions,
-                            new Invasion([currentState.sourceCell], coordinate, currentState.grid[currentState.sourceCell.q][currentState.sourceCell.r].soldiers),
+                            new Invasion([currentState.sourceCell], coordinate, [currentState.sourceSoldier]),
                         ],
-                        turnState: TURN_STATES.COMBAT_SELECTING_SOLDIER,
+                        sourceCell: null,
+                        turnState: TURN_STATES.COMBAT_SELECTING_CELL,
                     };
                 } else if (invasionsToSameTarget.length === 1) { // Existing invasion, append attacker
-                    invasionsToSameTarget[0].addNewAttacker(currentState.sourceCell, currentState.grid[currentState.sourceCell.q][currentState.sourceCell.r].soldiers);
+                    invasionsToSameTarget[0].addNewAttacker(currentState.sourceCell, [currentState.sourceSoldier]);
                     currentState = {
                         ...currentState,
-                        turnState: TURN_STATES.COMBAT_SELECTING_SOLDIER,
+                        sourceCell: null,
+                        turnState: TURN_STATES.COMBAT_SELECTING_CELL,
                     }
                 } else {
                     throw new Error("There should only ever be 1 invasion for the same defending cell.");
@@ -840,10 +885,8 @@ function handleNextPhase() {
                 currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r].soldiers = [
                     ...currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r].soldiers,
                     ...move.soldiers,
-                ]
-                // Cell.swapAllSoldiers(
-                //     currentState.grid[move.sourceCoordinate.q][move.sourceCoordinate.r], 
-                //     currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r]);
+                ];
+
                 return `${currentState.currentPlayer} moved to: ${move.targetCoordinate}`;
             });
             currentState = {
@@ -855,6 +898,7 @@ function handleNextPhase() {
                 ],
                 moves: [],
                 turnState: TURN_STATES.COMBAT_SELECTING_CELL,
+                sourceCell: null,
             };
             break;
         }
@@ -972,6 +1016,8 @@ function endTurn() {
         remainingReinforcements: 2,
         moves: [],
         attacks: [],
+        sourceCell: null,
+        sourceSoldier: null,
     };
 
     Object.keys(currentState.grid).toSorted(intSortFunction).forEach((q) => {
@@ -985,6 +1031,66 @@ function endTurn() {
                 });
             });
     });
+}
+
+function getActionsContent() {
+    switch (currentState.turnState) {
+        case TURN_STATES.PLACE_REINFORCEMENTS:
+            // TODO: Implement more inner content for reinforcements
+
+            return `
+                <h3> Reinforcements </h3>
+                ${new Array(currentState.remainingReinforcements).fill(null).map((sans, i) => {
+                    return `
+                        <div class="reinforcement" id="reinforcement-${i}" >
+                            <h4 class="reinforcment-number"> ${i} </h4>
+                        </div>
+                    
+                    `;
+                }).join("")}
+            `;
+        case TURN_STATES.MOVEMENT_SELECTING_CELL:
+        case TURN_STATES.MOVEMENT_SELECTING_SOLDIER:
+        case TURN_STATES.SELECTING_MOVE:
+            return `
+                <h3> Moves: </h3>
+                ${currentState.moves.map((move, i) => { 
+                    return `
+                        <div class="moves" id="move-${i}">
+                            <h4 class="move-number"> ${i} </h4>
+                            <p>
+                                From: ${move.sourceCoordinate}
+                                To: ${move.targetCoordinate}
+                                Soldiers: [${move.soldiers.map(soldier => soldier.id).join(", ")}]
+                            </p>
+                        </div>
+                    `;
+                }).join("")}
+            `;
+        case TURN_STATES.COMBAT_SELECTING_CELL:
+        case TURN_STATES.COMBAT_SELECTING_SOLDIER:
+        case TURN_STATES.SELECTING_COMBAT:
+            return `
+                <h3> Invasions: </h3>
+                ${currentState.invasions.map((invasion, i) => { 
+                    return `
+                        <div class="invasions" id="invasion-${i}">
+                            <h4 class="invasion-number"> ${i} </h4>
+                            <p>
+                                From: [${invasion.sourceCoordinates.join(", ")}]
+                                To: ${invasion.targetCoordinate}
+                                Soldiers: [${invasion.attackingSoldiers.map(soldier => soldier.id).join(", ")}]
+                            </p>
+                        </div>
+                    `;
+                }).join("")}
+            `;
+        default:
+            console.error(`Can't render ActionContent for ${currentState.turnState}`);
+            break;
+    }
+    console.error(`Should've returned content before reaching here for: ${currentState.turnState}`);
+    return "";
 }
 
 function shouldRenderMovesContainer() {
