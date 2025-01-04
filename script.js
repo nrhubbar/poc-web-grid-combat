@@ -92,6 +92,8 @@ class Cell {
         this.terrain = terrain;
         this.fortification = fortification;
         this.city = city;
+        this.isLegalMove = false;
+        this.isLegalInvasion = false;
     }
 
     /**
@@ -108,7 +110,7 @@ class Cell {
         }
 
         let soldierContent = "";
-        if (this.soldiers && this.soldiers.length === 1) {
+        if (this.soldiers && this.soldiers.length === 1) { // If just 1 soldier, show that soldier
             soldierContent = `
                 <div class="soldiers">
                     <div class="soldier ${this.soldiers[0].getStyleClasses()}">
@@ -116,7 +118,7 @@ class Cell {
                     </div>
                 </div>
             `;
-        } else if (this.soldiers && this.soldiers.length > 1) {
+        } else if (this.soldiers && this.soldiers.length > 1) { // If there are multiple soldiers, display a sum of Attack and Defence
             soldierContent = `
                 <div class="soldiers">
                     <div class="soldier ${this.soldiers[0].getStyleClasses()}">
@@ -242,6 +244,19 @@ class Cell {
 
         toCell.soldiers = fromCell.soldiers;
         fromCell.soldiers = [];
+    }
+
+    get moveStyle() {
+        return this.isLegalMove ? "empty-move" : "";
+    }
+
+    get invasionStyle() {
+        return this.isLegalInvasion ? "attack-move" : "";
+    }
+
+    resetCellStyle() {
+        this.isLegalMove = false;
+        this.isLegalInvasion = false;
     }
 }
 
@@ -483,8 +498,9 @@ function renderBoard() {
         const innerRow = Object.keys(currentState.grid[q]).toSorted(intSortFunction).map((r) => {
             const cell = currentState.grid[q][r];
             const isActive = shouldShowSoldiers(new Coordinates(q, r));
+            // TODO: Refactor out the calls to the cell's moveStyle and invasionStyle form this method, and move it into the cell's getBoardContent method.
             return `
-                <div class="cell" data-q="${q}" data-r="${r}" id="cell-wrapper-${q}-${r}">
+                <div class="cell ${cell.moveStyle} ${cell.invasionStyle}" data-q="${q}" data-r="${r}" id="cell-wrapper-${q}-${r}">
                     ${cell.getBoardContent(isActive)}
                 </div>
             `;
@@ -552,6 +568,11 @@ function renderBoard() {
     document.getElementById("next-phase-button").addEventListener("click", () => handleNextPhase());
 }
 
+/**
+ * Update 'currentState' based on cell click, then call renderBoard().
+ * @param {string} soldierId 
+ * @returns 
+ */
 function handleSoldierClick(soldierId) {
 
     switch (currentState.turnState) {
@@ -594,10 +615,8 @@ function handleSoldierClick(soldierId) {
                 console.error("This soldier has no moves");
             }
 
-            legalMoves.forEach((_coordinate) => {        
-                document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-                        .classList
-                        .add("empty-move");
+            legalMoves.forEach((_coordinate) => {
+                currentState.grid[_coordinate.q][_coordinate.r].isLegalMove = true;
             });
 
             currentState = {
@@ -648,10 +667,8 @@ function handleSoldierClick(soldierId) {
                 console.error("This soldier has no targets");
             }
 
-            legalTargets.forEach((_coordinate) => {        
-                document.getElementById(`cell-wrapper-${_coordinate.q}-${_coordinate.r}`)
-                        .classList
-                        .add("attack-move");
+            legalTargets.forEach((_coordinate) => {
+                currentState.grid[_coordinate.q][_coordinate.r].isLegalInvasion = true;
             });
 
             currentState = {
@@ -668,7 +685,7 @@ function handleSoldierClick(soldierId) {
             throw new Error(`Wrong state, should not have this listener: Current State: ${currentState.turnState} in handleSoldierClick`);
         }
     }
-
+    renderBoard();
 }
 
 function handleCellClick(coordinate) {
@@ -736,6 +753,7 @@ function handleCellClick(coordinate) {
                     turnState: TURN_STATES.MOVEMENT_SELECTING_CELL,
                     sourceCell: null,
                 };
+                resetBoardCellStyle();
                 renderBoard();
                 return;
             }
@@ -779,6 +797,7 @@ function handleCellClick(coordinate) {
             }
             
             currentState.sourceSoldier.hasMovedThisTurn = true;
+            resetBoardCellStyle();
             renderBoard();
             break;
         }
@@ -817,6 +836,7 @@ function handleCellClick(coordinate) {
                     sourceCell: null,
                     turnState: TURN_STATES.COMBAT_SELECTING_CELL,
                 };
+                resetBoardCellStyle();
                 renderBoard();
                 return;
             }
@@ -852,6 +872,7 @@ function handleCellClick(coordinate) {
                     throw new Error("There should only ever be 1 invasion for the same defending cell.");
                 }
             }
+            resetBoardCellStyle();
             renderBoard();
             break;
         }
@@ -1093,20 +1114,14 @@ function getActionsContent() {
     return "";
 }
 
-function shouldRenderMovesContainer() {
-    return [
-        TURN_STATES.MOVEMENT_SELECTING_CELL,
-        TURN_STATES.MOVEMENT_SELECTING_SOLDIER, 
-        TURN_STATES.SELECTING_MOVE,
-    ].includes(currentState.turnState);
-}
-
-function shouldRenderInvasionsContainer() {
-    return [
-        TURN_STATES.COMBAT_SELECTING_CELL,
-        TURN_STATES.COMBAT_SELECTING_SOLDIER, 
-        TURN_STATES.SELECTING_COMBAT,
-    ].includes(currentState.turnState);
+function resetBoardCellStyle() {
+    Object.keys(currentState.grid).toSorted(intSortFunction).forEach((q) => {
+        Object.keys(currentState.grid[q]).toSorted(intSortFunction)
+            .map((r) => currentState.grid[q][r])
+            .forEach(cell => {
+                cell.resetCellStyle();
+            });
+    });
 }
 
 function shouldShowSoldiers(coordinate) {
