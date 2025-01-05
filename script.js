@@ -2,8 +2,8 @@ const game = document.getElementById("game");
 
 const intSortFunction = (a, b) => a - b;
 
-const BOARD_HEIGHT = 6;
-const BOARD_WIDTH = 9;
+const BOARD_HEIGHT = 5;
+const BOARD_WIDTH = 5;
 
 
 class Coordinates {
@@ -563,12 +563,12 @@ let currentState = {
 // Initialize the soldiers
 currentState.grid[0][0].city = new City("Miele", PLAYERS.BLUE);
 currentState.grid[BOARD_WIDTH - Math.ceil(BOARD_HEIGHT / 2)][BOARD_HEIGHT - 1].city = new City("Putz", PLAYERS.GREEN); // [7, 4]
-currentState.grid[4][3].terrain = TERRAIN.FOREST;
-currentState.grid[5][3].terrain = TERRAIN.FOREST;
-currentState.grid[4][2].terrain = TERRAIN.FOREST;
-currentState.grid[5][2].terrain = TERRAIN.FOREST;
-currentState.grid[3][4].terrain = TERRAIN.FOREST;
-currentState.grid[1][3].terrain = TERRAIN.MOUNTAIN;
+// currentState.grid[4][3].terrain = TERRAIN.FOREST;
+// currentState.grid[5][3].terrain = TERRAIN.FOREST;
+// currentState.grid[4][2].terrain = TERRAIN.FOREST;
+// currentState.grid[5][2].terrain = TERRAIN.FOREST;
+// currentState.grid[3][4].terrain = TERRAIN.FOREST;
+// currentState.grid[1][3].terrain = TERRAIN.MOUNTAIN;
 
 
 function renderBoard() {
@@ -588,16 +588,6 @@ function renderBoard() {
             </div>
         </div>
     `;
-
-    const reader = [
-        [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]],
-        [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1]],
-        [[-1, 2], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2]],
-        [[-1, 3], [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3]],
-        [[-2, 4], [-1, 4], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
-        [[-2, 5], [-1, 5], [0, 5], [1, 5], [2, 5], [3, 5], [4, 5]],
-        [[-3, 6], [-2, 6], [-1, 6], [0, 6], [1, 6], [2, 6], [3, 6]],
-    ];
 
     const boardHtml = BOARD_INDEX.map((row, i) => {//Object.keys(currentState.grid).toSorted(intSortFunction).map((q) => {
         const innerRow = row.map((pair) => {//Object.keys(currentState.grid[q]).toSorted(intSortFunction).map((r) => {
