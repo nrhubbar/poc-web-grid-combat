@@ -83,8 +83,11 @@ class City {
 }
 
 class Cell {
-    constructor(soldiers = [], terrain = TERRAIN.PLAIN, fortification = FORTIFICATION.NONE, city) {
-        this.soldiers = soldiers;
+
+    #soldiers;
+
+    constructor(soldiers = {}, terrain = TERRAIN.PLAIN, fortification = FORTIFICATION.NONE, city) {
+        this.#soldiers = soldiers;
         this.terrain = terrain;
         this.fortification = fortification;
         this.city = city;
@@ -199,7 +202,7 @@ class Cell {
         return soldier.player === this.city.player;
     }
 
-    getPlayer() {
+    getPlayer() { // Todo: fix to deal with map
         if (this.soldiers.length > 0) {
             return this.soldiers[0].player;
         }
@@ -208,7 +211,7 @@ class Cell {
     }
 
     killSoldiers() {
-        this.soldiers = [];
+        this.#soldiers = {};
     }
 
     getMoves(coordinate) {
@@ -234,7 +237,7 @@ class Cell {
     }
 
     getDefence() {
-        const soldierDefence = this.soldiers
+        const soldierDefence = Object.values(this.#soldiers)
             .map(soldier => soldier.getDefence())
             .reduce(Defence.sumDefence(), new Defence(0, 0));
         
@@ -243,11 +246,20 @@ class Cell {
             + this.fortification.defenceRollModifier);
     }
 
-    static swapAllSoldiers(fromCell, toCell) {
-        fromCell.soldiers.forEach(soldier => soldier.hasMovedThisTurn = true);
+    addNewSoldier(soldier) {
+        this.#soldiers[soldier.id] = soldier;
+    }
 
-        toCell.soldiers = fromCell.soldiers;
-        fromCell.soldiers = [];
+    getSoldierById(soldierId) {
+        return this.#soldiers[soldierId];
+    }
+
+    removeSoldierById(soldierId) {
+        delete this.#soldiers[soldierId];
+    }
+
+    get soldiers() {
+        return [...Object.values(this.#soldiers)];
     }
 
     get moveStyle() {
@@ -325,7 +337,6 @@ class Soldier {
             const allMoves = coordinate.getNeighbors()
                 .filter((_coordinate) => { // if move is inbounds
                     return _coordinate.isInbounds();
-                
                 })
                 .map((_coordinate) => {
                         const terrainMovementCost = currentState.grid[_coordinate.q][_coordinate.r].terrain.movement;
@@ -589,16 +600,6 @@ function renderBoard() {
         </div>
     `;
 
-    const reader = [
-        [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]],
-        [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1]],
-        [[-1, 2], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2]],
-        [[-1, 3], [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3]],
-        [[-2, 4], [-1, 4], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
-        [[-2, 5], [-1, 5], [0, 5], [1, 5], [2, 5], [3, 5], [4, 5]],
-        [[-3, 6], [-2, 6], [-1, 6], [0, 6], [1, 6], [2, 6], [3, 6]],
-    ];
-
     const boardHtml = BOARD_INDEX.map((row, i) => {//Object.keys(currentState.grid).toSorted(intSortFunction).map((q) => {
         const innerRow = row.map((pair) => {//Object.keys(currentState.grid[q]).toSorted(intSortFunction).map((r) => {
             const q = pair[0]
@@ -689,17 +690,12 @@ function handleSoldierClick(soldierId) {
         case TURN_STATES.MOVEMENT_SELECTING_SOLDIER: {
             const sourceCoordinate = currentState.sourceCell;
             const cell = currentState.grid[sourceCoordinate.q][sourceCoordinate.r];
-            const soldiersWithMatchingId = cell.soldiers.filter(_soldier => _soldier.id == soldierId);
+            const soldier = cell.getSoldierById(soldierId);
 
-            if (soldiersWithMatchingId.length == 0) {
+            if (!soldier) {
                 console.error("Selected soldier not in expected cell, returning.")
                 return;
             }
-            if (soldiersWithMatchingId.length > 1) {
-                throw new Error(`Too many soldiers in cell with matching Id: ${soldierId}; ${soldiersWithMatchingId}; ${cell}`);
-            }
-
-            const soldier = soldiersWithMatchingId[0];
 
             if (soldier.player !== currentState.currentPlayer) {
                 console.error(`Something has gone terribly wrong, a soldier of the wrong cell was clickable. ${soldier.player}, ${currentState.currentPlayer}`);
@@ -742,17 +738,12 @@ function handleSoldierClick(soldierId) {
 
             const sourceCoordinate = currentState.sourceCell;
             const cell = currentState.grid[sourceCoordinate.q][sourceCoordinate.r];
-            const soldiersWithMatchingId = cell.soldiers.filter(_soldier => _soldier.id == soldierId);
+            const soldier = cell.getSoldierById(soldierId);
 
-            if (soldiersWithMatchingId.length == 0) {
+            if (!soldier) {
                 console.error("Selected soldier not in expected cell, returning.")
                 return;
             }
-            if (soldiersWithMatchingId.length > 1) {
-                throw new Error(`Too many soldiers in cell with matching Id: ${soldierId}; ${soldiersWithMatchingId}; ${cell}`);
-            }
-
-            const soldier = soldiersWithMatchingId[0];
 
             if (soldier.player !== currentState.currentPlayer) {
                 console.error(`Something has gone terribly wrong, a soldier of the wrong cell was clickable. ${soldier.player}, ${currentState.currentPlayer}`);
@@ -815,7 +806,7 @@ function handleCellClick(coordinate) {
                 return;
             }
             
-            currentState.grid[coordinate.q][coordinate.r].soldiers.push(soldier);
+            currentState.grid[coordinate.q][coordinate.r].addNewSoldier(soldier);
     
             currentState = {
                 ...currentState,
@@ -1012,10 +1003,11 @@ function handleNextPhase() {
         }
         case TURN_STATES.MOVEMENT_SELECTING_CELL: {
             const moveLogs = currentState.moves.map((move) => {
+                const targetCell = currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r];
                 move.orders.forEach((order) => {
                     const sourceCell = currentState.grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
-                    sourceCell.soldiers = sourceCell.soldiers.filter(_soldier => order.soldier.id !== _soldier.id);
-                    currentState.grid[move.targetCoordinate.q][move.targetCoordinate.r].soldiers.push(order.soldier);
+                    sourceCell.removeSoldierById(order.soldier.id);
+                    targetCell.addNewSoldier(order.soldier);
                 });
 
                 return `${currentState.currentPlayer} moved to: ${move.targetCoordinate}`;
@@ -1111,7 +1103,7 @@ function combat(invasion) { // TODO: Make this method have less side effects
             invasion.orders.forEach(order => {
                 const sourceCell = currentState.grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
                 // Pop Soldiers off of "source cell"
-                sourceCell.soldiers = sourceCell.soldiers.filter((_soldier) => _soldier.id !== order.soldier.id);
+                sourceCell.removeSoldierById(order.soldier.id);
             });
             return message;
         }
@@ -1136,10 +1128,10 @@ function combat(invasion) { // TODO: Make this method have less side effects
             invasion.orders.forEach(order => {
                 const sourceCell = currentState.grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
                 // Pop Soldiers off of "source cell"
-                sourceCell.soldiers = sourceCell.soldiers.filter((_soldier) => _soldier.id !== order.soldier.id);
+                sourceCell.removeSoldierById(order.soldier.id);
                 
                 // Push Soldier on to "target cell"
-                currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].soldiers.push(order.soldier);
+                currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].addNewSoldier(order.soldier);
             });
             return message;
         }
