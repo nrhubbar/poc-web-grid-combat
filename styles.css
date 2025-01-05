@@ -65,6 +65,10 @@ body {
   /* margin-left: calc(calc(var(--board-size) * 2) * var(--cell-width)) */
 }
 
+.odd-row {
+  margin-left: var(--cell-width)
+}
+
 .cell {
   width: var(--cell-width);
   height: var(--cell-height); /* Adjusted for pointy top */

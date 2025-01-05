@@ -2,10 +2,9 @@ const game = document.getElementById("game");
 
 const intSortFunction = (a, b) => a - b;
 
-// const BOARD_HEIGHT = 3;
-// const BOARD_WIDTH = 3;
-const BOARD_SIZE = 5;
-document.documentElement.style.setProperty("--board-size", BOARD_SIZE);
+const BOARD_HEIGHT = 6;
+const BOARD_WIDTH = 9;
+
 
 class Coordinates {
     constructor(q, r) {
@@ -14,12 +13,8 @@ class Coordinates {
         this.s = -q - r;
     }
 
-    isInbounds() {
-        const isQInbounds = Math.abs(this.q) < BOARD_SIZE;
-        const isRInbounds = Math.abs(this.r) < BOARD_SIZE;
-        const isSInbounds = Math.abs(this.s) < BOARD_SIZE;
-            
-        return isQInbounds && isRInbounds && isSInbounds;
+    isInbounds() {            
+        return currentState.grid[this.q] && currentState.grid[this.q][this.r];
     }
 
     getNeighbors() {
@@ -431,25 +426,49 @@ class Invasion {
 
         currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addInvasion(this.invasionId);        
     }
-
+    
     get attackingSoldiers() {
         return this.orders.map(order => order.soldier);
     }
-
+    
     get sourceCoordinates() {
         return this.orders.map(order => order.sourceCoordinate);
     }
 }
 
-function generateInitialBoard(size) {
-    const grid = {};
-      for (let q = -size + 1; q < size; q++) {
-        grid[q] = {};
-        for (let r = Math.max(-size + 1, -q - size + 1); r < Math.min(size, -q + size); r++) {
-            grid[q][r] = new Cell();
+function generateBoardIndex(height, width) {
+    const gridIndex = [];
+
+    for (let r = 0; r < height; r++) {
+        const row = [];
+        const offset = Math.floor(r / 2);
+
+        for (let q = -offset; q < width - offset; q++) {
+            row.push([q, r]);
         }
-      }
-      return grid;
+
+        gridIndex.push(row);
+    }
+
+    return gridIndex;
+}
+
+
+function generateInitialBoard(boardIndex) {
+    const grid = {};
+
+    boardIndex.forEach((row) => {
+        row.forEach((pair) => {
+            if (grid[pair[0]]) {
+                grid[pair[0]][pair[1]] = new Cell();
+            } else {
+                grid[pair[0]] = {};
+                grid[pair[0]][pair[1]] = new Cell();
+            }
+        });
+    });
+
+    return grid;
 }
 
 const PLAYERS = Object.freeze({
@@ -526,7 +545,8 @@ const COMBAT_RESULTS_BY_ODDS = Object.freeze({
 const STARTING_TURN_STATE = TURN_STATES.PLACE_REINFORCEMENTS;
 const STARTING_REMAINING_REINFORCEMENTS = 2; // TODO: Doesn't really scale well.
 const STARTING_PLAYER = PLAYERS.BLUE;
-const STARTING_GRID = generateInitialBoard(BOARD_SIZE);
+const BOARD_INDEX = generateBoardIndex(BOARD_HEIGHT, BOARD_WIDTH);
+const STARTING_GRID = generateInitialBoard(BOARD_INDEX);
 
 let currentState = {
     turnState: STARTING_TURN_STATE,
@@ -541,15 +561,15 @@ let currentState = {
 };
 
 // Initialize the soldiers
-currentState.grid[-(BOARD_SIZE - 1)][0].city = new City("Miele", PLAYERS.BLUE); 
-currentState.grid[(BOARD_SIZE - 1)][0].city = new City("Putz", PLAYERS.GREEN); 
-currentState.grid[1][1].terrain = TERRAIN.FOREST;
-currentState.grid[1][2].terrain = TERRAIN.FOREST;
-// currentState.grid[1][3].terrain = TERRAIN.FOREST;
-currentState.grid[1][2].terrain = TERRAIN.FOREST;
-// currentState.grid[2][2].terrain = TERRAIN.FOREST;
+currentState.grid[0][0].city = new City("Miele", PLAYERS.BLUE);
+currentState.grid[BOARD_WIDTH - Math.ceil(BOARD_HEIGHT / 2)][BOARD_HEIGHT - 1].city = new City("Putz", PLAYERS.GREEN); // [7, 4]
+currentState.grid[4][3].terrain = TERRAIN.FOREST;
+currentState.grid[5][3].terrain = TERRAIN.FOREST;
+currentState.grid[4][2].terrain = TERRAIN.FOREST;
+currentState.grid[5][2].terrain = TERRAIN.FOREST;
+currentState.grid[3][4].terrain = TERRAIN.FOREST;
+currentState.grid[1][3].terrain = TERRAIN.MOUNTAIN;
 
-currentState.grid[-1][1].terrain = TERRAIN.MOUNTAIN;
 
 function renderBoard() {
 
@@ -569,8 +589,20 @@ function renderBoard() {
         </div>
     `;
 
-    const boardHtml = Object.keys(currentState.grid).toSorted(intSortFunction).map((q) => {
-        const innerRow = Object.keys(currentState.grid[q]).toSorted(intSortFunction).map((r) => {
+    const reader = [
+        [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0]],
+        [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1]],
+        [[-1, 2], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2]],
+        [[-1, 3], [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3]],
+        [[-2, 4], [-1, 4], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]],
+        [[-2, 5], [-1, 5], [0, 5], [1, 5], [2, 5], [3, 5], [4, 5]],
+        [[-3, 6], [-2, 6], [-1, 6], [0, 6], [1, 6], [2, 6], [3, 6]],
+    ];
+
+    const boardHtml = BOARD_INDEX.map((row, i) => {//Object.keys(currentState.grid).toSorted(intSortFunction).map((q) => {
+        const innerRow = row.map((pair) => {//Object.keys(currentState.grid[q]).toSorted(intSortFunction).map((r) => {
+            const q = pair[0]
+            const r = pair[1]
             const cell = currentState.grid[q][r];
             const isActive = shouldShowSoldiers(new Coordinates(q, r));
             // TODO: Refactor out the calls to the cell's moveStyle and invasionStyle form this method, and move it into the cell's getBoardContent method.
@@ -581,8 +613,10 @@ function renderBoard() {
             `;
         }).join("");
 
+
+
         return `
-            <div class="row">
+            <div class="row ${i % 2 == 0 ? "" : "odd-row"}">
                 ${innerRow}
             </div>
         `;
