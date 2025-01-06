@@ -388,7 +388,7 @@ class Cell {
 }
 
 class Soldier {
-  static #GLOBAL_SOLDIER_ID = 0;
+  private static GLOBAL_SOLDIER_ID = 0;
 
   player: PlayerType;
   attack: number;
@@ -418,7 +418,7 @@ class Soldier {
     this.defenceRollModifier = defenceRollModifier;
     this.hasMovedThisTurn = false;
     this.hasAttackedThisTurn = false;
-    this.id = Soldier.#GLOBAL_SOLDIER_ID++;
+    this.id = Soldier.GLOBAL_SOLDIER_ID++;
     this.#attackRange = attackRange;
   }
 
@@ -501,7 +501,7 @@ class Order {
 }
 
 class Move {
-  static #MOVE_ID = 0;
+  private static MOVE_ID = 0;
 
   targetCoordinate: Coordinates;
   id: number;
@@ -513,7 +513,7 @@ class Move {
     soldier: Soldier
   ) {
     this.targetCoordinate = targetCoordinate;
-    this.id = Move.#MOVE_ID++;
+    this.id = Move.MOVE_ID++;
     this.orders = [new Order(sourceCoordinate, soldier)];
 
     currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addMove(this.id);
@@ -541,7 +541,7 @@ class Move {
 }
 
 class Invasion {
-  static #INVASION_ID = 0;
+  private static INVASION_ID = 0;
 
   targetCoordinate: Coordinates;
   invasionId: number;
@@ -553,7 +553,7 @@ class Invasion {
     attackingSoldier: Soldier
   ) {
     this.targetCoordinate = targetCoordinate;
-    this.invasionId = Invasion.#INVASION_ID++;
+    this.invasionId = Invasion.INVASION_ID++;
     this.orders = [new Order(sourceCoordinate, attackingSoldier)];
 
     currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addInvasion(
@@ -795,7 +795,7 @@ let currentState: CurrentStateType = {
   invasions: [],
 };
 
-// Initialize the soldiers
+// Initialize the Cities
 currentState.grid[0][0].city = new City("Miele", PLAYERS.BLUE);
 currentState.grid[BOARD_WIDTH - Math.ceil(BOARD_HEIGHT / 2)][
   BOARD_HEIGHT - 1
@@ -1563,17 +1563,6 @@ function resetCellInvasions(): void {
           cell.clearInvasions();
         });
     });
-}
-
-function shouldShowSoldiers(coordinate: Coordinates): boolean {
-  const isItCorrectTurnState = [
-    TURN_STATES.MOVEMENT_SELECTING_SOLDIER,
-    TURN_STATES.COMBAT_SELECTING_SOLDIER,
-  ].includes(currentState.turnState);
-
-  const isCellSelected = coordinate.equals(currentState.sourceCell || null);
-
-  return isItCorrectTurnState && isCellSelected;
 }
 
 renderBoard();
