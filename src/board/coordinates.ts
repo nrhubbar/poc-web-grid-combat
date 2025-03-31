@@ -1,3 +1,5 @@
+import { GridType } from "./gridGeneration";
+
 export default class Coordinates {
     q: number;
     r: number;
@@ -9,8 +11,8 @@ export default class Coordinates {
       this.s = -q - r;
     }
   
-    isInbounds(): boolean {
-      return !!(currentState.grid[this.q] && currentState.grid[this.q][this.r]);
+    isInbounds(grid: GridType): boolean {
+      return !!(grid[this.q] && grid[this.q][this.r]);
     }
   
     getNeighbors(): Coordinates[] {

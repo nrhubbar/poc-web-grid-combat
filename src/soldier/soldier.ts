@@ -1,5 +1,5 @@
-import { currentState } from "../app";
 import Coordinates from "../board/coordinates";
+import { GridType } from "../board/gridGeneration";
 import { Attack, Defence } from "../combat/combatResolution";
 import { PlayerType, PLAYERS } from "../game/player";
 
@@ -56,7 +56,7 @@ export default class Soldier {
       return new Defence(this.defence, this.defenceRollModifier);
     }
   
-    getMoves(coordinate: Coordinates, depthRemaining: number = this.movement): Coordinates[] {
+    getMoves(coordinate: Coordinates, grid: GridType, depthRemaining: number = this.movement): Coordinates[] {
       let coordinates: Coordinates[] = [];
       if (depthRemaining < 0) {
         coordinates = [];
@@ -67,12 +67,11 @@ export default class Soldier {
           .getNeighbors()
           .filter((_coordinate) => {
             // if move is inbounds
-            return _coordinate.isInbounds();
+            return _coordinate.isInbounds(grid);
           })
           .map((_coordinate) => {
-            const terrainMovementCost =
-              currentState.grid[_coordinate.q][_coordinate.r].terrain.movement;
-            return this.getMoves(_coordinate, depthRemaining - terrainMovementCost);
+            const terrainMovementCost = grid[_coordinate.q][_coordinate.r].terrain.movement;
+            return this.getMoves(_coordinate, grid, depthRemaining - terrainMovementCost);
           })
           .filter((x) => x.length > 0)
           .flatMap((x) => x);
@@ -83,8 +82,8 @@ export default class Soldier {
       return coordinates;
     }
   
-    getTargets(coordinate: Coordinates): Coordinates[] {
-      return this.getMoves(coordinate, this.attackRange);
+    getTargets(coordinate: Coordinates, grid: GridType): Coordinates[] {
+      return this.getMoves(coordinate, grid, this.attackRange);
     }
   
     get movement(): number {

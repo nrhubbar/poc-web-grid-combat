@@ -1,37 +1,46 @@
 
 interface CombatOddsResults {
-    [odds: number]: string[];
+    [odds: number]: CombatOutcomes[];
 }
+
+type CombatOutcomes = "ATTACKER_ELIMINATED"
+  | "ATTACKER_ATTRITION"
+  | "ATTACKER_DEMORALIZED"
+  | "BOTH_DEMORALIZED"
+  | "DEFENDER_DEMORALIZED"
+  | "DEFENDER_EXCHANGE"
+  | "DEFENDER_ELIMINATED";
+
 
 export const COMBAT_OUTCOMES = Object.freeze({
     /**
      * All Attacking units are eliminated.
      */
-    ATTACKER_ELIMINATED: "ATTACKER_ELIMINATED",
+    ATTACKER_ELIMINATED: "ATTACKER_ELIMINATED" as CombatOutcomes,
     /**
      * Attacker must lose Attack strength "at least equal" to the defence strength of the defending units.
      */
-    ATTACKER_ATTRITION: "ATTACKER_ATTRITION",
+    ATTACKER_ATTRITION: "ATTACKER_ATTRITION" as CombatOutcomes,
     /**
      * Attacker must retreat one hex, or lose unit with the largest Attack Strength, units that retreat are demoralized.
      */
-    ATTACKER_DEMORALIZED: "ATTACKER_DEMORALIZED",
+    ATTACKER_DEMORALIZED: "ATTACKER_DEMORALIZED" as CombatOutcomes,
     /**
      * Attacker suffers "ATTACKER_DEMORALIZED", Defender suffers "DEFENDER_DEMORALIZED", the result is applied to the defender first.
      */
-    BOTH_DEMORALIZED: "BOTH_DEMORALIZED",
+    BOTH_DEMORALIZED: "BOTH_DEMORALIZED" as CombatOutcomes,
     /**
      * Defender must retreat one hex, or lose unit with the highest Defence Strength, units that retreat are demoralized.
      */
-    DEFENDER_DEMORALIZED: "DEFENDER_DEMORALIZED",
+    DEFENDER_DEMORALIZED: "DEFENDER_DEMORALIZED" as CombatOutcomes,
     /**
      * Defender eliminated, BUT attacker must lose attack strength "at least equal" to the defence strength.
      */
-    DEFENDER_EXCHANGE: "DEFENDER_EXCHANGE",
+    DEFENDER_EXCHANGE: "DEFENDER_EXCHANGE" as CombatOutcomes,
     /**
      * All defending units are eliminated.
      */
-    DEFENDER_ELIMINATED: "DEFENDER_ELIMINATED",
+    DEFENDER_ELIMINATED: "DEFENDER_ELIMINATED" as CombatOutcomes,
   });
   
   export const COMBAT_RESULTS_BY_ODDS: CombatOddsResults = Object.freeze({

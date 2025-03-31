@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/nrhubbar/poc-web-grid-combat#readme",
   "dependencies": {
+    "@reduxjs/toolkit": "^2.6.1",
     "rollup": "^4.29.2"
   },
   "devDependencies": {

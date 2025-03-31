@@ -4,8 +4,7 @@ import { PlayerType } from "./player";
 import { TERRAIN, TerrainType } from "./terrain";
 import { FORTIFICATION, FortificationType } from "./fortification";
 import { Attack, Defence } from "../combat/combatResolution";
-
-const intSortFunction = (a: number, b: number) => a - b;
+import { GridType } from "../board/gridGeneration";
 
 export class City {
     name: string;
@@ -167,9 +166,9 @@ export class City {
       this.#soldiers = {};
     }
   
-    getMoves(coordinate: Coordinates): Coordinates[] {
+    getMoves(coordinate: Coordinates, grid: GridType): Coordinates[] {
       const allMoves = this.soldiers.map((soldier) =>
-        soldier.getMoves(coordinate)
+        soldier.getMoves(coordinate, grid)
       ).flatMap((x) => x);
   
       const uniqueMoves = new Set(allMoves);
@@ -177,9 +176,9 @@ export class City {
       return [...uniqueMoves];
     }
   
-    getTargets(coordinate: Coordinates): Coordinates[] {
+    getTargets(coordinate: Coordinates, grid: GridType): Coordinates[] {
       const allTargets = this.soldiers.map((soldier) =>
-        soldier.getTargets(coordinate)
+        soldier.getTargets(coordinate, grid)
       ).flatMap((x) => x);
   
       const uniqueTargets = new Set(allTargets);
@@ -251,47 +250,5 @@ export class City {
     clearInvasions(): void {
       this.invasions.clear();
     }
-  }
-
-export function resetCellInvasions(): void {
-    Object.keys(currentState.grid)
-        .map((q) => parseInt(q))
-        .sort(intSortFunction)
-        .forEach((q) => {
-            Object.keys(currentState.grid[q])
-                .map((r) => parseInt(r))
-                .sort(intSortFunction)
-                .map((r) => currentState.grid[q][r])
-                .forEach((cell) => {
-                    cell.clearInvasions();
-                });
-        });
-}export function resetCellMoves(): void {
-    Object.keys(currentState.grid)
-        .map((q) => parseInt(q))
-        .sort(intSortFunction)
-        .forEach((q) => {
-            Object.keys(currentState.grid[q])
-                .map((r) => parseInt(r))
-                .sort(intSortFunction)
-                .map((r) => currentState.grid[q][r])
-                .forEach((cell) => {
-                    cell.clearMoves();
-                });
-        });
-}
-export function resetBoardCellStyle(): void {
-    Object.keys(currentState.grid)
-        .map((q) => parseInt(q))
-        .sort(intSortFunction)
-        .forEach((q) => {
-            Object.keys(currentState.grid[q])
-                .map((r) => parseInt(r))
-                .sort(intSortFunction)
-                .map((r) => currentState.grid[q][r])
-                .forEach((cell) => {
-                    cell.resetCellStyle();
-                });
-        });
 }
 

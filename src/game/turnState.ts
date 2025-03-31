@@ -1,4 +1,3 @@
-import { currentState, renderBoard } from "../app";
 import Coordinates from "../board/coordinates";
 import { GridType } from "../board/gridGeneration";
 import { combat } from "../combat/combatResolution";
@@ -7,7 +6,7 @@ import Soldier from "../soldier/soldier";
 import { resetCellMoves, resetCellInvasions } from "./cell";
 import { getNextTurn, PlayerType } from "./player";
 
-type TurnStateType = 
+export type TurnStateType = 
   | "PLACE_REINFORCEMENTS"
   | "MOVEMENT_SELECTING_CELL"
   | "MOVEMENT_SELECTING_SOLDIER"
@@ -42,7 +41,10 @@ export const TURN_STATES = Object.freeze({
     COMBAT_SELECTING_CELL: "COMBAT_SELECTING_CELL" as TurnStateType,
     COMBAT_SELECTING_SOLDIER: "COMBAT_SELECTING_SOLDIER" as TurnStateType,
     SELECTING_COMBAT: "SELECTING_COMBAT" as TurnStateType,
-});/**
+});
+
+// TODO: endTurn and handleNextPhase should probably be "Actions"
+/**
  * Sets the current player, to the next player.
  * Resets the grid state.
  */
@@ -125,7 +127,7 @@ export function handleNextPhase(): void {
 
         case TURN_STATES.COMBAT_SELECTING_CELL: {
             const invasionLogs = currentState.invasions.map((invasion) => {
-                return combat(invasion);
+                return combat(invasion, currentState.grid);
             });
             currentState = {
                 ...currentState,

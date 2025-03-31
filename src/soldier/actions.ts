@@ -1,7 +1,8 @@
-import { currentState } from "../app";
 import Coordinates from "../board/coordinates";
 import { TURN_STATES } from "../game/turnState";
 import Soldier from "./soldier";
+
+// TODO: This whole module needs to be refactored
 
 /**
  * Only to be used by {Move}.

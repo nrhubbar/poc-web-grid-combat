@@ -1,6 +1,6 @@
-import { currentState } from "../app";
+import { GridType } from "../board/gridGeneration";
 import { Invasion } from "../soldier/actions";
-import { COMBAT_RESULTS_BY_ODDS, COMBAT_OUTCOMES } from "./results";
+import { COMBAT_RESULTS_BY_ODDS, COMBAT_OUTCOMES, CombatOutcomes } from "./results";
 
 export class Attack {
     attack: number;
@@ -48,20 +48,20 @@ export class Defence {
     }
   }
 
-export function combat(invasion: Invasion): string {
-    const soldierAttack = invasion.attackingSoldiers
+export function getCombatOutcome(invasion: Invasion, grid: GridType): CombatOutcomes {
+  const soldierAttack = invasion.attackingSoldiers
         .map((soldier) => soldier.getAttack())
         .reduce(Attack.sumAttack(), new Attack(0, 0));
 
     const cellAttack = invasion.sourceCoordinates
-        .map((_coordinate) => currentState.grid[_coordinate.q][_coordinate.r].getAttack())
+        .map((_coordinate) => grid[_coordinate.q][_coordinate.r].getAttack())
         .reduce(Attack.sumAttack(), new Attack(0, 0));
 
     const attack = new Attack(
         soldierAttack.attack + cellAttack.attack,
         soldierAttack.attackRollModifier + cellAttack.attackRollModifier
     );
-    const defence = currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].getDefence();
+    const defence = grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].getDefence();
 
     const combatOdds = Math.floor(attack.attack / defence.defence);
     const dieRoll = Math.floor(Math.random() * 6) + 1;
@@ -77,14 +77,20 @@ export function combat(invasion: Invasion): string {
 
     console.log(
         `Attack from: [${invasion.sourceCoordinates.join(", ")}], ${attack}; 
-    Defence from: ${invasion.targetCoordinate}, ${defence}; 
-    Combat Odds: ${combatOdds}; 
-    Die Roll: ${dieRoll}; 
-    Final Roll: ${roll}; 
-    Outcome: ${outcome}`
+      Defence from: ${invasion.targetCoordinate}, ${defence}; 
+      Combat Odds: ${combatOdds}; 
+      Die Roll: ${dieRoll}; 
+      Final Roll: ${roll}; 
+      Outcome: ${outcome}`
     );
+  
+}
+
+export function combat(invasion: Invasion, grid: GridType): string {
+    const outcome = getCombatOutcome(invasion, grid);
 
     switch (outcome) {
+        // TODO: What to do with this Method, it should be a reducer based on the interactions with state, but how....
         case COMBAT_OUTCOMES.ATTACKER_ELIMINATED: {
             const message = `${currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].getPlayer()} repelled the attack, Soldiers in attacking cells eliminated.`;
             invasion.orders.forEach((order) => {
