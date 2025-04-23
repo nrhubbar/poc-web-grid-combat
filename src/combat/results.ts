@@ -3,7 +3,7 @@ interface CombatOddsResults {
     [odds: number]: CombatOutcomes[];
 }
 
-type CombatOutcomes = "ATTACKER_ELIMINATED"
+export type CombatOutcomes = "ATTACKER_ELIMINATED"
   | "ATTACKER_ATTRITION"
   | "ATTACKER_DEMORALIZED"
   | "BOTH_DEMORALIZED"

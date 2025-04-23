@@ -1,3 +1,4 @@
+import { Draft } from "@reduxjs/toolkit";
 import { GridType } from "./gridGeneration";
 
 export default class Coordinates {
@@ -11,7 +12,7 @@ export default class Coordinates {
       this.s = -q - r;
     }
   
-    isInbounds(grid: GridType): boolean {
+    isInbounds(grid: Draft<GridType>): boolean {
       return !!(grid[this.q] && grid[this.q][this.r]);
     }
   

@@ -2,7 +2,8 @@ import { generateBoardIndex, generateInitialBoard } from "./board/gridGeneration
 import { City } from "./game/cell";
 import { PLAYERS } from "./game/player";
 import { TERRAIN } from "./game/terrain";
-import { CurrentStateType, TURN_STATES } from "./game/turnState";
+import { TURN_STATES } from "./game/turnState";
+import { CurrentState } from "./slice";
 
 
 const BOARD_HEIGHT = 6;
@@ -22,7 +23,7 @@ STARTING_GRID[5][2].terrain = TERRAIN.FOREST;
 STARTING_GRID[3][4].terrain = TERRAIN.FOREST;
 STARTING_GRID[1][3].terrain = TERRAIN.MOUNTAIN;
 
-function getInitialState(): CurrentStateType {
+function getInitialState(): CurrentState {
     return {
         turnState: STARTING_TURN_STATE,
         remainingReinforcements: STARTING_REMAINING_REINFORCEMENTS,

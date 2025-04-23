@@ -1,8 +1,9 @@
+import { Draft } from "@reduxjs/toolkit";
 import Coordinates from "../board/coordinates";
+import { GridType } from "../board/gridGeneration";
 import { TURN_STATES } from "../game/turnState";
+import { CurrentState } from "../slice";
 import Soldier from "./soldier";
-
-// TODO: This whole module needs to be refactored
 
 /**
  * Only to be used by {Move}.
@@ -10,9 +11,9 @@ import Soldier from "./soldier";
  */
 class Order {
     sourceCoordinate: Coordinates;
-    soldier: Soldier;
+    soldier: Draft<Soldier>;
   
-    constructor(sourceCoordinate: Coordinates, soldier: Soldier) {
+    constructor(sourceCoordinate: Coordinates, soldier: Draft<Soldier>) {
         this.sourceCoordinate = sourceCoordinate;
         this.soldier = soldier;
     }
@@ -28,21 +29,24 @@ export class Move {
     constructor(
       sourceCoordinate: Coordinates,
       targetCoordinate: Coordinates,
-      soldier: Soldier
+      soldier: Draft<Soldier>,
+      grid: Draft<GridType>,
     ) {
         this.targetCoordinate = targetCoordinate;
         this.id = Move.MOVE_ID++;
         this.orders = [new Order(sourceCoordinate, soldier)];
     
-        currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addMove(this.id);
-        currentState.grid[targetCoordinate.q][targetCoordinate.r].addMove(this.id);
+        grid[sourceCoordinate.q][sourceCoordinate.r].addMove(this.id);
+        grid[targetCoordinate.q][targetCoordinate.r].addMove(this.id);
     }
   
-    addNewSoldier(sourceCoordinate: Coordinates, soldier: Soldier): void {
+    addNewSoldier(sourceCoordinate: Coordinates, soldier: Draft<Soldier>, grid: Draft<GridType>): void {
         this.soldiers.push(soldier);
         this.sourceCoordinates.push(sourceCoordinate);
         this.orders.push(new Order(sourceCoordinate, soldier));
-        currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addMove(this.id);
+        
+        
+        grid[sourceCoordinate.q][sourceCoordinate.r].addMove(this.id);
     }
   
     removeSoldier(): void {
@@ -53,7 +57,7 @@ export class Move {
         return this.orders.map((order) => order.sourceCoordinate); // TODO: make this unique
     }
   
-    get soldiers(): Soldier[] {
+    get soldiers(): Draft<Soldier>[] {
         return this.orders.map((order) => order.soldier);
     }
 }
@@ -68,30 +72,31 @@ export class Invasion {
     constructor(
       sourceCoordinate: Coordinates,
       targetCoordinate: Coordinates,
-      attackingSoldier: Soldier
+      attackingSoldier: Draft<Soldier>,
+      grid: Draft<GridType>,
     ) {
         this.targetCoordinate = targetCoordinate;
         this.invasionId = Invasion.INVASION_ID++;
         this.orders = [new Order(sourceCoordinate, attackingSoldier)];
     
-        currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addInvasion(
+        grid[sourceCoordinate.q][sourceCoordinate.r].addInvasion(
             this.invasionId
         );
-        currentState.grid[targetCoordinate.q][targetCoordinate.r].addInvasion(
+        grid[targetCoordinate.q][targetCoordinate.r].addInvasion(
             this.invasionId
         );
     }
   
-    addNewAttacker(sourceCoordinate: Coordinates, attackingSoldier: Soldier): void {
+    addNewAttacker(sourceCoordinate: Coordinates, attackingSoldier: Draft<Soldier>, grid: Draft<GridType>): void {
         this.orders.push(new Order(sourceCoordinate, attackingSoldier));
         this.sourceCoordinates.push(sourceCoordinate);
   
-        currentState.grid[sourceCoordinate.q][sourceCoordinate.r].addInvasion(
+        grid[sourceCoordinate.q][sourceCoordinate.r].addInvasion(
             this.invasionId
         );
     }
   
-    get attackingSoldiers(): Soldier[] {
+    get attackingSoldiers(): Draft<Soldier>[] {
         return this.orders.map((order) => order.soldier);
     }
   
@@ -100,7 +105,8 @@ export class Invasion {
     }
 }
 
-export function getActionsContent(): string {
+export function renderActionsPaneContent(currentState: CurrentState): string {
+    // TODO: I don't love that this takes in the whole current state.
     switch (currentState.turnState) {
         case TURN_STATES.PLACE_REINFORCEMENTS:
             return `

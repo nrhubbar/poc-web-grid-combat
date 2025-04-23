@@ -1,3 +1,4 @@
+import { Draft } from "@reduxjs/toolkit";
 import { GridType } from "../board/gridGeneration";
 import { Invasion } from "../soldier/actions";
 import { COMBAT_RESULTS_BY_ODDS, COMBAT_OUTCOMES, CombatOutcomes } from "./results";
@@ -48,7 +49,7 @@ export class Defence {
     }
   }
 
-export function getCombatOutcome(invasion: Invasion, grid: GridType): CombatOutcomes {
+export function getCombatOutcome(invasion: Invasion, grid: Draft<GridType>): CombatOutcomes {
   const soldierAttack = invasion.attackingSoldiers
         .map((soldier) => soldier.getAttack())
         .reduce(Attack.sumAttack(), new Attack(0, 0));
@@ -83,18 +84,21 @@ export function getCombatOutcome(invasion: Invasion, grid: GridType): CombatOutc
       Final Roll: ${roll}; 
       Outcome: ${outcome}`
     );
+
+    return outcome;
   
 }
 
-export function combat(invasion: Invasion, grid: GridType): string {
+export function combat(invasion: Invasion, grid: Draft<GridType>): string {
     const outcome = getCombatOutcome(invasion, grid);
 
     switch (outcome) {
         // TODO: What to do with this Method, it should be a reducer based on the interactions with state, but how....
+        // Made it so this is called by the reducer, lets see if that works.
         case COMBAT_OUTCOMES.ATTACKER_ELIMINATED: {
-            const message = `${currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].getPlayer()} repelled the attack, Soldiers in attacking cells eliminated.`;
+            const message = `${grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].getPlayer()} repelled the attack, Soldiers in attacking cells eliminated.`;
             invasion.orders.forEach((order) => {
-                const sourceCell = currentState.grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
+                const sourceCell = grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
                 sourceCell.removeSoldierById(order.soldier.id);
             });
             return message;
@@ -109,15 +113,15 @@ export function combat(invasion: Invasion, grid: GridType): string {
         case COMBAT_OUTCOMES.DEFENDER_EXCHANGE:
         case COMBAT_OUTCOMES.DEFENDER_ELIMINATED: {
             const attackingCoordinate = invasion.sourceCoordinates[0];
-            const message = `${currentState.grid[attackingCoordinate.q][attackingCoordinate.r].getPlayer()} won the attack, Soldier in ${invasion.targetCoordinate} eliminated.`;
+            const message = `${grid[attackingCoordinate.q][attackingCoordinate.r].getPlayer()} won the attack, Soldier in ${invasion.targetCoordinate} eliminated.`;
 
-            currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].killSoldiers();
+            grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].killSoldiers();
 
             invasion.orders.forEach((order) => {
-                const sourceCell = currentState.grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
+                const sourceCell = grid[order.sourceCoordinate.q][order.sourceCoordinate.r];
                 sourceCell.removeSoldierById(order.soldier.id);
 
-                currentState.grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].addNewSoldier(order.soldier);
+                grid[invasion.targetCoordinate.q][invasion.targetCoordinate.r].addNewSoldier(order.soldier);
             });
             return message;
         }

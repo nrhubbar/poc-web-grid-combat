@@ -5,6 +5,7 @@ import { TERRAIN, TerrainType } from "./terrain";
 import { FORTIFICATION, FortificationType } from "./fortification";
 import { Attack, Defence } from "../combat/combatResolution";
 import { GridType } from "../board/gridGeneration";
+import { Draft } from "@reduxjs/toolkit";
 
 export class City {
     name: string;
@@ -206,8 +207,8 @@ export class City {
       );
     }
   
-    addNewSoldier(soldier: Soldier): void {
-      this.#soldiers[soldier.id] = soldier;
+    addNewSoldier(soldier: Draft<Soldier>): void {
+      this.#soldiers[soldier.id] = soldier; // TODO: UGGHHHHH
     }
   
     getSoldierById(soldierId: number): Soldier | undefined {

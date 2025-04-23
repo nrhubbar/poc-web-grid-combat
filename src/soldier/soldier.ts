@@ -1,3 +1,4 @@
+import { Draft } from "@reduxjs/toolkit";
 import Coordinates from "../board/coordinates";
 import { GridType } from "../board/gridGeneration";
 import { Attack, Defence } from "../combat/combatResolution";
@@ -9,13 +10,13 @@ export default class Soldier {
     player: PlayerType;
     attack: number;
     defence: number;
-    #movement: number;
+    _movement: number;
     attackRollModifier: number;
     defenceRollModifier: number;
     hasMovedThisTurn: boolean;
     hasAttackedThisTurn: boolean;
     id: number;
-    #attackRange: number;
+    _attackRange: number;
   
     constructor(
       player: PlayerType,
@@ -29,13 +30,13 @@ export default class Soldier {
       this.player = player;
       this.attack = attack;
       this.defence = defence;
-      this.#movement = movement;
+      this._movement = movement;
       this.attackRollModifier = attackRollModifier;
       this.defenceRollModifier = defenceRollModifier;
       this.hasMovedThisTurn = false;
       this.hasAttackedThisTurn = false;
       this.id = Soldier.GLOBAL_SOLDIER_ID++;
-      this.#attackRange = attackRange;
+      this._attackRange = attackRange;
     }
   
     getStyleClasses(): string {
@@ -56,7 +57,7 @@ export default class Soldier {
       return new Defence(this.defence, this.defenceRollModifier);
     }
   
-    getMoves(coordinate: Coordinates, grid: GridType, depthRemaining: number = this.movement): Coordinates[] {
+    getMoves(coordinate: Coordinates, grid: Draft<GridType>, depthRemaining: number = this.movement): Coordinates[] {
       let coordinates: Coordinates[] = [];
       if (depthRemaining < 0) {
         coordinates = [];
@@ -82,7 +83,7 @@ export default class Soldier {
       return coordinates;
     }
   
-    getTargets(coordinate: Coordinates, grid: GridType): Coordinates[] {
+    getTargets(coordinate: Coordinates, grid: Draft<GridType>): Coordinates[] {
       return this.getMoves(coordinate, grid, this.attackRange);
     }
   
@@ -90,13 +91,14 @@ export default class Soldier {
       if (this.hasMovedThisTurn) {
         return 0;
       }
-      return this.#movement;
+      return this._movement;
     }
   
     get attackRange(): number {
       if (this.hasAttackedThisTurn) {
         return 0;
       }
-      return this.#attackRange;
+      return this._attackRange;
     }
   }
+  
