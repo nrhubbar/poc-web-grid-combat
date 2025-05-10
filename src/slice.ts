@@ -81,6 +81,7 @@ function handleCellClickReducer(state: Draft<CurrentState>, action: PayloadActio
                 state.turnState = TURN_STATES.MOVEMENT_SELECTING_CELL;
                 state.sourceCell = null;
                 // TODO: Reset Board Cell Style hmm....
+                resetBoardCellStyleReducer(state);
                 return;
             }
 
@@ -115,9 +116,6 @@ function handleCellClickReducer(state: Draft<CurrentState>, action: PayloadActio
                     state.grid,
                 )
                 movesToSameCell[0].soldiers.push(state.sourceSoldier!);
-
-                state.turnState = TURN_STATES.MOVEMENT_SELECTING_CELL;
-                state.sourceCell = null;
             } else {
                 console.log(`Found more than one move to same target cell: ${movesToSameCell}`)
                 alert("Found more than 1 move to the same destination");
@@ -125,7 +123,9 @@ function handleCellClickReducer(state: Draft<CurrentState>, action: PayloadActio
             }
 
             state.sourceSoldier!.hasMovedThisTurn = true;
-            // TODO: Reset Board Cell Style
+            state.turnState = TURN_STATES.MOVEMENT_SELECTING_CELL;
+            state.sourceCell = null;
+            resetBoardCellStyleReducer(state);
             break;
         }
 
@@ -158,7 +158,7 @@ function handleCellClickReducer(state: Draft<CurrentState>, action: PayloadActio
                 state.sourceCell = null;
                 state.turnState = TURN_STATES.COMBAT_SELECTING_CELL;
 
-                // TODO: Reset Board Style
+                resetBoardCellStyleReducer(state);
                 return;
             }
 
@@ -192,16 +192,16 @@ function handleCellClickReducer(state: Draft<CurrentState>, action: PayloadActio
                     state.grid
                 )
 
-                state.sourceCell = null;
-                state.turnState = TURN_STATES.COMBAT_SELECTING_CELL;
-
             } else {
                 console.error(`Multiple Invasions found for same target: ${invasionsToSameTarget}`);
                 alert("Mulitple Invasions found for same target cell, there should only be 1");
+                return;
             }
 
             state.sourceSoldier!.hasAttackedThisTurn = true;
-            // TODO: Reset board style
+            state.sourceCell = null;
+            state.turnState = TURN_STATES.COMBAT_SELECTING_CELL;
+            resetBoardCellStyleReducer(state);
             break;
         }
 
@@ -306,7 +306,7 @@ function handleSoldierClickReducer(state: Draft<CurrentState>, action: PayloadAc
                 state.grid[_coordinate.q][_coordinate.r].isLegalMove = true;
             });
 
-            state.turnState = TURN_STATES.SELECTING_MOVE;
+            state.turnState = TURN_STATES.SELECTING_COMBAT;
             state.sourceSoldier = soldier;
             state.sourceCell = sourceCoordinates;
             state.validTargets = legalTargets;
@@ -428,7 +428,7 @@ export function handleNextPhaseReducer(state: Draft<CurrentState>): void {
                 return `${state.currentPlayer} moved to: ${move.targetCoordinate}`;
             });
 
-            // TODO: Reset Cell Moves
+            resetCellMovesReducer(state);
 
             state.logs.push(
                 `${state.currentPlayer} is entering Combat Phase`,
@@ -448,8 +448,8 @@ export function handleNextPhaseReducer(state: Draft<CurrentState>): void {
 
             state.logs.push(...invasionLogs);
 
-            // TODO: Reset Cell Invasions
-            // TODO: End Turn
+            resetBoardCellStyleReducer(state);
+            endTurnReducer(state);
             break;
         }
 
@@ -482,7 +482,7 @@ export function handleNextPhaseReducer(state: Draft<CurrentState>): void {
 }
 
 export const gameSlice = createSlice({
-    name: 'GameSlice',
+    name: 'game',
     initialState,
     reducers: {
         // Todo: Anything that mutates state needs to go in here
@@ -496,5 +496,8 @@ export const gameSlice = createSlice({
         handleNextPhase: handleNextPhaseReducer,
         endTurn: endTurnReducer,
     }
-})
+});
+
+export const { handleCellClick, handleSoldierClick, resetCellInvasions, resetCellMoves, resetBoardCellStyle, handleNextPhase, endTurn } = gameSlice.actions;
+export default gameSlice.reducer;
 

@@ -2,18 +2,13 @@ import Coordinates from "./board/coordinates";
 import { BOARD_INDEX } from "./init";
 import { CurrentState } from "./slice";
 import { renderActionsPaneContent } from "./soldier/actions";
+import { store } from "./store";
+import { handleCellClick, handleSoldierClick, handleNextPhase } from "./slice";
 
 const GAME_ELEMENT = document.getElementById("game") as HTMLDivElement;
 
-// TODO: Integrate initialization with Redux
-// let currentState = getInitialState();
-
-// function getState(): CurrentState {
-//   return currentState;
-// }
-
 function renderBoard(): void {
-  const state: CurrentState = getState();
+  const state: CurrentState = store.getState().game;
 
   const title = `
     <div>
@@ -107,7 +102,7 @@ function renderBoard(): void {
 
     const q = parseInt(qStr);
     const r = parseInt(rStr);
-    cellEl.addEventListener("click", () => handleCellClick(new Coordinates(q, r)));
+    cellEl.addEventListener("click", () => store.dispatch(handleCellClick(new Coordinates(q, r))));
   });
 
   Array.from(document.querySelectorAll(".soldier-info.clickable")).forEach((soldierEl) => {
@@ -115,11 +110,12 @@ function renderBoard(): void {
     if (!soldierIdStr) return;
 
     const soldierId = parseInt(soldierIdStr);
-    soldierEl.addEventListener("click", () => handleSoldierClick(soldierId));
+    soldierEl.addEventListener("click", () => store.dispatch(handleSoldierClick(soldierId)));
   });
 
   const nextPhaseButton = document.getElementById("next-phase-button") as HTMLButtonElement;
-  nextPhaseButton.addEventListener("click", () => handleNextPhase());
+  nextPhaseButton.addEventListener("click", () => store.dispatch(handleNextPhase()));
 }
 
+store.subscribe(renderBoard);
 renderBoard();
